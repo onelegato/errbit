@@ -1,6 +1,7 @@
 # Errbit on Nginx
 
 Guide for people to setup their own errbit without using heroku.
+(Note: Clone errbit before following. We modified config/unicorn.rb to work in our setup)
 
 ### The open source, self-hosted error catcher
 
