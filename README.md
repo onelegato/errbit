@@ -42,121 +42,126 @@ It will deploy your app into /var/www/apps/errbit/
 
 Setup Nginx by doing 
 
-  * apt-get install nginx
+apt-get install nginx
 
-  * sudo useradd -s /sbin/nologin -r nginx
-  * sudo usermod -a -G web nginx
-  * sudo chgrp -R web /var/www
-  * sudo chmod -R 775 /var/www 
+sudo useradd -s /sbin/nologin -r nginx
+sudo usermod -a -G web nginx
+sudo chgrp -R web /var/www
+sudo chmod -R 775 /var/www 
 
 # Sample nginx.conf
 
-  * user nginx;
-  * worker_processes 4;
-  * pid /run/nginx.pid;  * 
+```bash
+user nginx;
+worker_processes 4;
+pid /run/nginx.pid;
 
-  * events {
-  *   worker_connections 1024;
-  *   # multi_accept on;
-  * }  * 
+user nginx;
+worker_processes 4;
+pid /run/nginx.pid;
 
-  * http {  * 
+events {
+  worker_connections 1024;
+  # multi_accept on;
+}
 
-  *   ##
-  *   # Basic Settings
-  *   ##  * 
+http {
 
-  *   sendfile on;
-  *   tcp_nopush on;
-  *   tcp_nodelay on;
-  *   keepalive_timeout 65;
-  *   types_hash_max_size 2048;
-  *   # server_tokens off;  * 
+  ##
+  # Basic Settings
+  ##
 
-  *   # server_names_hash_bucket_size 64;
-  *   # server_name_in_redirect off;  * 
+  sendfile on;
+  tcp_nopush on;
+  tcp_nodelay on;
+  keepalive_timeout 65;
+  types_hash_max_size 2048;
+  # server_tokens off;
 
-  *   include /etc/nginx/mime.types;
-  *   default_type application/octet-stream;  * 
+  # server_names_hash_bucket_size 64;
+  # server_name_in_redirect off;
 
-  *   ##
-  *   # Logging Settings
-  *   ##  * 
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
 
-  *   access_log /var/log/nginx/access.log;
-  *   error_log /var/log/nginx/error.log;  * 
+  ##
+  # Logging Settings
+  ##
 
-  *   ##
-  *   # Gzip Settings
-  *   ##  * 
+  access_log /var/log/nginx/access.log;
+  error_log /var/log/nginx/error.log;
 
-  *   gzip on;
-  *   gzip_disable "msie6";  * 
+  ##
+  # Gzip Settings
+  ##
 
-  *   # gzip_vary on;
-  *   # gzip_proxied any;
-  *   # gzip_comp_level 6;
-  *   # gzip_buffers 16 8k;
-  *   # gzip_http_version 1.1;
-  *   # gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;  * 
+  gzip on;
+  gzip_disable "msie6";
 
-  *   ##
-  *   # nginx-naxsi config
-  *   ##
-  *   # Uncomment it if you installed nginx-naxsi
-  *   ##  * 
+  # gzip_vary on;
+  # gzip_proxied any;
+  # gzip_comp_level 6;
+  # gzip_buffers 16 8k;
+  # gzip_http_version 1.1;
+  # gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
 
-  *   #include /etc/nginx/naxsi_core.rules;  * 
+  ##
+  # nginx-naxsi config
+  ##
+  # Uncomment it if you installed nginx-naxsi
+  ##
 
-  *   ##
-  *   # nginx-passenger config
-  *   ##
-  *   # Uncomment it if you installed nginx-passenger
-  *   ##
-  *   
-  *   #passenger_root /usr;
-  *   #passenger_ruby /usr/bin/ruby;  * 
+  #include /etc/nginx/naxsi_core.rules;
 
-  *   ##
-  *   # Virtual Host Configs
-  *   ##  * 
+  ##
+  # nginx-passenger config
+  ##
+  # Uncomment it if you installed nginx-passenger
+  ##
+  
+  #passenger_root /usr;
+  #passenger_ruby /usr/bin/ruby;
 
-  *   include /etc/nginx/conf.d/*.conf;
-  *   include /etc/nginx/sites-enabled/*;  * 
+  ##
+  # Virtual Host Configs
+  ##
 
-  * }
+  include /etc/nginx/conf.d/*.conf;
+  include /etc/nginx/sites-enabled/*;
+
+}
+
+```
 
 # Modify sites-enabled
 
 Find default at /etc/nginx/sites-enabled/ and modify with the following
+```bash
+upstream unicorn_server {
+ # This is the socket we configured in unicorn.rb
+ server unix:/var/www/apps/errbit/current/tmp/sockets/unicorn.sock
+ fail_timeout=0;
+}
 
- *   upstream unicorn_server {
- *    # This is the socket we configured in unicorn.rb
- *    server unix:/var/www/apps/errbit/current/tmp/sockets/unicorn.sock
- *    fail_timeout=0;
- *   }
- * 
+server {
+        listen 80 default_server;
+        listen [::]:80 default_server ipv6only=on;
 
- * server {
- *         listen 80 default_server;
- *         listen [::]:80 default_server ipv6only=on;
+  root /var/www/apps/errbit/current/public;
+  client_max_body_size 4G;
+  # Make site accessible from http://localhost/
+  server_name (your server);
+  keepalive_timeout 5;
+  
+  location / {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_redirect off;
 
- *         root /var/www/apps/errbit/current/public;
- *         client_max_body_size 4G;
- *         # Make site accessible from http://localhost/
- *         server_name (your server);
- *         keepalive_timeout 5;
- *         
- *         location / {
- *                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
- *                 proxy_set_header Host $http_host;
- *                 proxy_redirect off; * 
-
- *                 # If you don't find the filename in the static files
- *                 # Then request it from the unicorn server
- *                 if (!-f $request_filename) {
- *                         proxy_pass http://unicorn_server;
- *                         break;
- *                 }
- *         }
- * }
+    if (!-f $request_filename) {
+      proxy_pass http://unicorn_server;
+      break;
+    }
+  }
+}
+```
