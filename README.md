@@ -47,14 +47,14 @@ set :use_sudo, true
 # Nginx configuration
 
 Setup Nginx by doing 
-
+```bash
 apt-get install nginx
 
 sudo useradd -s /sbin/nologin -r nginx
 sudo usermod -a -G web nginx
 sudo chgrp -R web /var/www
 sudo chmod -R 775 /var/www 
-
+```
 # Sample nginx.conf
 
 ```bash
