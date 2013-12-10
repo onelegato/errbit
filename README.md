@@ -38,6 +38,12 @@ cap deploy:setup deploy db:create_mongoid_indexes
 
 It will deploy your app into /var/www/apps/errbit/
 
+Make a copy of deploy.example.rb and add your server's username and password inside.
+```bash
+set :user, "root"
+set :scm_passphrase, "xxxxxxxx"
+set :use_sudo, true
+```
 # Nginx configuration
 
 Setup Nginx by doing 
